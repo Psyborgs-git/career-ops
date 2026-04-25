@@ -18,8 +18,7 @@ jds/*
 
 .vgc
 cv.md
-# interviews-prep/*.md
-interview-prep/story-bank.md
+dev.db
 
 # User config and customization (never auto-updated)
 config/profile.yml
