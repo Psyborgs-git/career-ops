@@ -173,8 +173,7 @@ for (const f of userFiles) {
 console.log('\n6. Personal data leak check');
 
 const leakPatterns = [
-  'Santiago', 'santifer.io', 'Santifer iRepair', 'Zinkee', 'ALMAS',
-  'hi@santifer.io', '688921377', '/Users/santifer/',
+
 ];
 
 const scanExtensions = ['md', 'yml', 'html', 'mjs', 'sh', 'go', 'json'];

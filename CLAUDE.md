@@ -1,13 +1,5 @@
 # Career-Ops -- AI Job Search Pipeline
 
-## Origin
-
-This system was built and used by [santifer](https://santifer.io) to evaluate 740+ job offers, generate 100+ tailored CVs, and land a Head of Applied AI role. The archetypes, scoring logic, negotiation scripts, and proof point structure all reflect his specific career search in AI/automation roles.
-
-The portfolio that goes with this system is also open source: [cv-santiago](https://github.com/santifer/cv-santiago).
-
-**It will work out of the box, but it's designed to be made yours.** If the archetypes don't match your career, the modes are in the wrong language, or the scoring doesn't fit your priorities -- just ask. You (AI Agent) can edit the user's files. The user says "change the archetypes to data engineering roles" and you do it. That's the whole point.
-
 ## Data Contract (CRITICAL)
 
 There are two layers. Read `DATA_CONTRACT.md` for the full list.
@@ -193,8 +185,6 @@ Once all files exist, confirm:
 > - Run `/career-ops` to see all commands
 >
 > Everything is customizable — just ask me to change anything.
->
-> Tip: Having a personal portfolio dramatically improves your job search. If you don't have one yet, the author's portfolio is also open source: github.com/santifer/cv-santiago — feel free to fork it and make it yours."
 
 Then suggest automation:
 > "Want me to scan for new offers automatically? I can set up a recurring scan every few days so you don't miss anything. Just say 'scan every 3 days' and I'll configure it."

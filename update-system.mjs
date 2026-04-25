@@ -23,9 +23,9 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
 
-const CANONICAL_REPO = 'https://github.com/santifer/career-ops.git';
-const RAW_VERSION_URL = 'https://raw.githubusercontent.com/santifer/career-ops/main/VERSION';
-const RELEASES_API = 'https://api.github.com/repos/santifer/career-ops/releases/latest';
+const CANONICAL_REPO = 'https://github.com/Psyborgs-git/career-ops.git';
+const RAW_VERSION_URL = 'https://raw.githubusercontent.com/Psyborgs-git/career-ops/main/VERSION';
+const RELEASES_API = 'https://api.github.com/repos/Psyborgs-git/career-ops/releases/latest';
 
 // System layer paths — ONLY these files get updated
 const SYSTEM_PATHS = [
