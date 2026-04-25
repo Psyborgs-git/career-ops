@@ -23,6 +23,24 @@ export default function App() {
   const [selectedPosting, setSelectedPosting] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [theme, setTheme] = useState('dark');
+
+  useEffect(() => {
+    if (!chrome?.storage?.local) return;
+    chrome.storage.local.get(['theme'], (result) => {
+      if (result?.theme) {
+        setTheme(result.theme);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    document.body.classList.toggle('theme-light', theme === 'light');
+    document.body.classList.toggle('theme-dark', theme === 'dark');
+    if (chrome?.storage?.local) {
+      chrome.storage.local.set({ theme });
+    }
+  }, [theme]);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -153,6 +171,13 @@ export default function App() {
         <div className="header-top">
           <h1>Career-Ops</h1>
           <div className="header-actions">
+            <button
+              className="btn btn-secondary"
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+            </button>
             <button className="btn btn-secondary" onClick={() => setView('settings')} title="Open settings">
               ⚙️ Settings
             </button>

@@ -8,12 +8,25 @@
  */
 
 const DAEMON_URL = 'http://localhost:3737';
-const OLLAMA_URL = 'http://localhost:11434';
+const OLLAMA_URL = 'http://localhost:11444';
 let cachedData = null;
 
 async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   return tab;
+}
+
+async function injectContentScript(tabId) {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ['content.js'],
+    });
+    return true;
+  } catch (err) {
+    console.warn('[Background] Failed to inject content script:', err);
+    return false;
+  }
 }
 
 async function sendToActiveTab(message) {
@@ -22,7 +35,29 @@ async function sendToActiveTab(message) {
     return { success: false, error: 'No active tab' };
   }
 
-  return chrome.tabs.sendMessage(tab.id, message);
+  try {
+    return await chrome.tabs.sendMessage(tab.id, message);
+  } catch (err) {
+    console.warn('[Background] Initial message failed:', err);
+
+    const injected = await injectContentScript(tab.id);
+    if (!injected) {
+      return {
+        success: false,
+        error: 'Could not connect to the active page. Make sure the extension is on a supported application page like *.greenhouse.io and refresh the tab.',
+      };
+    }
+
+    try {
+      return await chrome.tabs.sendMessage(tab.id, message);
+    } catch (retryErr) {
+      console.warn('[Background] Retry message failed:', retryErr);
+      return {
+        success: false,
+        error: 'Could not connect to the active page. Make sure the extension is on a supported application page like *.greenhouse.io and refresh the tab.',
+      };
+    }
+  }
 }
 
 // ---- Open side panel on action click ----
@@ -56,13 +91,20 @@ async function syncData() {
     console.log(`[Background] Synced: ${json.count.postings} postings, ${json.count.reports} reports`);
     return json;
   } catch (err) {
-    console.error('[Background] Sync failed:', err.message);
-    // Try cache
+    // Try cache first, then surface a friendly status if the daemon is unavailable.
     const stored = await chrome.storage.local.get('careerOpsData');
     if (stored.careerOpsData) {
       cachedData = stored.careerOpsData;
+      console.info('[Background] Daemon unavailable, loaded cached data.');
       return cachedData;
     }
+
+    if (err.message === 'Failed to fetch' || err.message.includes('Daemon')) {
+      console.info('[Background] Daemon not reachable. Start the local daemon with `npm run daemon` and refresh the sidebar.');
+    } else {
+      console.error('[Background] Sync failed:', err.message);
+    }
+
     throw err;
   }
 }
@@ -188,15 +230,40 @@ async function handleMessage(msg) {
 
     case 'GENERATE_OLLAMA_ANSWER': {
       try {
-        const { model, prompt, stream } = msg.payload || {};
-        const res = await fetch(`${OLLAMA_URL}/api/generate`, {
+        const { model, question, reportFilename, fieldLabel, fieldMeta } = msg.payload || {};
+        if (!model || !question) {
+          return { success: false, error: 'Missing model or question' };
+        }
+
+        // Use daemon endpoint which builds the prompt with context
+        const res = await fetch(`${DAEMON_URL}/api/ollama/generate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model, prompt, stream: stream ?? false }),
+          body: JSON.stringify({
+            model,
+            question,
+            reportFilename,
+            fieldLabel,
+            fieldMeta,
+          }),
         });
-        if (!res.ok) throw new Error(`Ollama returned ${res.status}`);
+
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => ({}));
+          throw new Error(errJson.error || `Daemon returned ${res.status}`);
+        }
+
         const json = await res.json();
-        return { success: true, answer: json.response };
+        if (!json.success) {
+          throw new Error(json.error || 'Generation failed');
+        }
+
+        return {
+          success: true,
+          answer: json.answer,
+          model: json.model,
+          contextFiles: json.contextFiles,
+        };
       } catch (err) {
         return { success: false, error: `Ollama generation failed: ${err.message}` };
       }

@@ -12,7 +12,7 @@
   ],
   "host_permissions": [
     "http://localhost:3737/*",
-    "http://localhost:11434/*",
+    "http://localhost:11444/*",
     "https://boards.greenhouse.io/*",
     "https://*.ashbyhq.com/*",
     "https://jobs.lever.co/*",

@@ -64,6 +64,29 @@
   --transition: 150ms ease;
 }
 
+.theme-light {
+  --bg-primary: #f6f7fb;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f2f4f8;
+  --bg-input: #f8fafc;
+  --bg-overlay: rgba(255, 255, 255, 0.95);
+
+  --cyan: hsl(187, 74%, 32%);
+  --cyan-light: hsl(187, 74%, 45%);
+  --cyan-dim: hsl(187, 40%, 25%);
+  --purple: hsl(270, 70%, 45%);
+  --purple-light: hsl(270, 70%, 55%);
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-link: var(--cyan);
+
+  --border: #d1d5db;
+  --border-light: #e2e8f0;
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {

@@ -24,7 +24,7 @@ const {
 
 const app = express();
 const PORT = 3737;
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
+const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11444';
 const DEFAULT_CAREER_OPS_PATH = process.env.CAREER_OPS_PATH
   ? path.resolve(process.env.CAREER_OPS_PATH)
   : path.resolve(path.join(__dirname, '..', '..'));

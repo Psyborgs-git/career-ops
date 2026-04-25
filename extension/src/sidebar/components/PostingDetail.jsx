@@ -216,6 +216,7 @@ export default function PostingDetail({
           <CVTab
             posting={posting}
             cv={cv}
+            pdfs={pdfs}
             matchingPdfs={matchingPdfs}
             contextFiles={contextFiles}
             onAutoAttach={handleAutoAttach}
@@ -325,7 +326,19 @@ function AnswersTab({ answers }) {
   );
 }
 
-function CVTab({ posting, cv, matchingPdfs, contextFiles, onAutoAttach, busy, message }) {
+function CVTab({ posting, cv, pdfs, matchingPdfs, contextFiles, onAutoAttach, busy, message }) {
+  const resumePdfs = useMemo(() => (pdfs || []).filter((fileName) => {
+    const lower = String(fileName).toLowerCase();
+    return !/cover|motivation|cover-letter|cover_letter|coverletter|letter/.test(lower);
+  }), [pdfs]);
+
+  const coverLetterPdfs = useMemo(() => (pdfs || []).filter((fileName) => {
+    const lower = String(fileName).toLowerCase();
+    return /cover|motivation|cover-letter|cover_letter|coverletter|letter/.test(lower);
+  }), [pdfs]);
+
+  const fallbackResumePdfs = useMemo(() => resumePdfs.filter((fileName) => !matchingPdfs.includes(fileName)), [resumePdfs, matchingPdfs]);
+
   return (
     <>
       <div className="section-card">
@@ -342,9 +355,37 @@ function CVTab({ posting, cv, matchingPdfs, contextFiles, onAutoAttach, busy, me
             onAutoAttach={onAutoAttach}
             busy={busy}
           />
+        )) : fallbackResumePdfs.length > 0 ? (
+          fallbackResumePdfs.map((pdf) => (
+            <ResumeCard
+              key={pdf}
+              filename={pdf}
+              onAutoAttach={onAutoAttach}
+              busy={busy}
+            />
+          ))
+        ) : (
+          <p className="text-muted mt-md">
+            No resume PDF available yet. Run `node generate-pdf.mjs` if you want a tailored resume file.
+          </p>
+        )}
+      </div>
+
+      <div className="section-card">
+        <h3>Cover letter upload helper</h3>
+        <p className="text-sm text-muted">
+          If you have a cover letter PDF in the workspace, you can attach it separately alongside your CV.
+        </p>
+        {coverLetterPdfs.length > 0 ? coverLetterPdfs.map((pdf) => (
+          <ResumeCard
+            key={pdf}
+            filename={pdf}
+            onAutoAttach={onAutoAttach}
+            busy={busy}
+          />
         )) : (
           <p className="text-muted mt-md">
-            No generated PDF matched this company yet. Run `node generate-pdf.mjs` if you want a tailored resume file.
+            No cover letter PDF found. Add a file with “cover” or “letter” in the name to the output folder.
           </p>
         )}
       </div>
