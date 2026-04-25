@@ -1,4 +1,4 @@
-# Career-Ops
+# JAILBREAK: Career-Ops + Chrome Extension (Auto-Apply + Form Filling + ollama inline answers)
 
 [English](README.md) | [Español](README.es.md) | [Português (Brasil)](README.pt-BR.md) | [한국어](README.ko-KR.md) | [日本語](README.ja.md) | [Русский](README.ru.md) | [简体中文](README.cn.md) | [繁體中文](README.zh-TW.md)
 
