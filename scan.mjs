@@ -3,11 +3,12 @@
 /**
  * scan.mjs — Zero-token portal scanner
  *
- * Fetches Greenhouse, Ashby, and Lever APIs directly, applies title
- * filters from portals.yml, deduplicates against existing history,
- * and appends new offers to pipeline.md + scan-history.tsv.
+ * Fetches ATS APIs where available and falls back to live Playwright scans
+ * for custom careers pages, applies title filters from portals.yml,
+ * deduplicates against existing history, and appends new offers to
+ * pipeline.md + scan-history.tsv.
  *
- * Zero Claude API tokens — pure HTTP + JSON.
+ * Zero Claude API tokens — pure HTTP + Playwright.
  *
  * Usage:
  *   node scan.mjs                  # scan all enabled companies
@@ -17,6 +18,7 @@
 
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync } from 'fs';
 import yaml from 'js-yaml';
+import { chromium } from 'playwright';
 const parseYaml = yaml.load;
 
 // ── Config ──────────────────────────────────────────────────────────
@@ -31,10 +33,17 @@ mkdirSync('data', { recursive: true });
 
 const CONCURRENCY = 10;
 const FETCH_TIMEOUT_MS = 10_000;
+const PLAYWRIGHT_TIMEOUT_MS = 15_000;
+const PLAYWRIGHT_HYDRATE_MS = 2_000;
+const MAX_PLAYWRIGHT_LINKS = 300;
 
 // ── API detection ───────────────────────────────────────────────────
 
 function detectApi(company) {
+  if (company.api_provider && company.api) {
+    return { type: company.api_provider, url: company.api };
+  }
+
   // Greenhouse: explicit api field
   if (company.api && company.api.includes('greenhouse')) {
     return { type: 'greenhouse', url: company.api };
@@ -57,6 +66,15 @@ function detectApi(company) {
     return {
       type: 'lever',
       url: `https://api.lever.co/v0/postings/${leverMatch[1]}`,
+    };
+  }
+
+  // Teamtailor RSS
+  const teamtailorMatch = url.match(/([a-z0-9-]+)\.teamtailor\.com(?:\/jobs(?:\.rss)?)?/i);
+  if (teamtailorMatch) {
+    return {
+      type: 'teamtailor',
+      url: `https://${teamtailorMatch[1]}.teamtailor.com/jobs.rss`,
     };
   }
 
@@ -104,7 +122,37 @@ function parseLever(json, companyName) {
   }));
 }
 
-const PARSERS = { greenhouse: parseGreenhouse, ashby: parseAshby, lever: parseLever };
+function parseTeamtailor(xml, companyName) {
+  const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)];
+  return items.map(([, item]) => ({
+    title: decodeXml(matchTag(item, 'title')),
+    url: decodeXml(matchTag(item, 'link')),
+    company: companyName,
+    location: '',
+  })).filter(job => job.title && job.url);
+}
+
+const PARSERS = {
+  greenhouse: parseGreenhouse,
+  ashby: parseAshby,
+  lever: parseLever,
+  teamtailor: parseTeamtailor,
+};
+
+function matchTag(xml, tag) {
+  const match = xml.match(new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'i'));
+  return match ? match[1].trim() : '';
+}
+
+function decodeXml(text = '') {
+  return text
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
 
 // ── Fetch with timeout ──────────────────────────────────────────────
 
@@ -115,6 +163,18 @@ async function fetchJson(url) {
     const res = await fetch(url, { signal: controller.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchText(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.text();
   } finally {
     clearTimeout(timer);
   }
@@ -151,7 +211,7 @@ function loadSeenUrls() {
   // pipeline.md — extract URLs from checkbox lines
   if (existsSync(PIPELINE_PATH)) {
     const text = readFileSync(PIPELINE_PATH, 'utf-8');
-    for (const match of text.matchAll(/- \[[ x]\] (https?:\/\/\S+)/g)) {
+    for (const match of text.matchAll(/- \[[ x!]\] (https?:\/\/\S+)/g)) {
       seen.add(match[1]);
     }
   }
@@ -247,6 +307,127 @@ async function parallelFetch(tasks, limit) {
   return results;
 }
 
+function normalizeText(text = '') {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+function looksLikeJobLink(url = '') {
+  return /\/(jobs?|job-boards|careers?|positions?|openings?|roles?)\b|jobs\.(ashbyhq|lever)\.com|greenhouse\.io|workable\.com|smartrecruiters\.com|teamtailor\.com|myworkdayjobs\.com|workdayjobs\.com/i.test(url);
+}
+
+function looksLikeListingsHub(text = '') {
+  return /\b(all jobs|view jobs|open roles|open positions|browse jobs|see all jobs|explore roles|join us|careers)\b/i.test(text);
+}
+
+async function extractJobLinks(page) {
+  return page.evaluate(({ maxLinks }) => {
+    const hiddenByTree = (element) =>
+      Boolean(element.closest('nav, header, footer, [aria-hidden="true"], [hidden]'));
+
+    const visible = (element) => {
+      const style = window.getComputedStyle(element);
+      if (style.display === 'none' || style.visibility === 'hidden') return false;
+      if (!element.getClientRects().length) return false;
+      return Array.from(element.getClientRects()).some((rect) => rect.width > 0 && rect.height > 0);
+    };
+
+    return Array.from(document.querySelectorAll('a[href]'))
+      .filter((anchor) => !hiddenByTree(anchor) && visible(anchor))
+      .map((anchor) => {
+        const title = [
+          anchor.innerText,
+          anchor.getAttribute('aria-label'),
+          anchor.getAttribute('title'),
+        ].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+
+        return {
+          title,
+          url: anchor.href,
+        };
+      })
+      .filter((entry) => entry.title.length >= 4 && entry.title.length <= 160)
+      .slice(0, maxLinks);
+  }, { maxLinks: MAX_PLAYWRIGHT_LINKS });
+}
+
+async function collectPageJobs(page, companyName) {
+  const candidates = await extractJobLinks(page);
+  const jobs = [];
+  const hubs = [];
+
+  for (const candidate of candidates) {
+    if (!candidate.url || candidate.url.startsWith('mailto:') || candidate.url.startsWith('tel:')) continue;
+    if (looksLikeJobLink(candidate.url)) {
+      jobs.push({
+        title: normalizeText(candidate.title),
+        url: candidate.url,
+        company: companyName,
+        location: '',
+      });
+      continue;
+    }
+    if (looksLikeListingsHub(candidate.title) || looksLikeListingsHub(candidate.url)) {
+      hubs.push(candidate.url);
+    }
+  }
+
+  return {
+    jobs: dedupeJobs(jobs),
+    hubs,
+  };
+}
+
+function dedupeJobs(jobs) {
+  const seen = new Set();
+  return jobs.filter((job) => {
+    const key = `${job.url}::${job.title}`;
+    if (!job.url || !job.title || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+async function scanCareersPage(browser, company) {
+  const page = await browser.newPage();
+
+  try {
+    await page.goto(company.careers_url, {
+      waitUntil: 'domcontentloaded',
+      timeout: PLAYWRIGHT_TIMEOUT_MS,
+    });
+    await page.waitForTimeout(PLAYWRIGHT_HYDRATE_MS);
+    await page.mouse.wheel(0, 2000);
+    await page.waitForTimeout(500);
+
+    let { jobs, hubs } = await collectPageJobs(page, company.name);
+
+    if (jobs.length === 0 && hubs.length > 0) {
+      const nextUrl = hubs.find((url) => {
+        try {
+          const candidate = new URL(url);
+          const current = new URL(company.careers_url);
+          return candidate.origin === current.origin || looksLikeJobLink(url);
+        } catch {
+          return false;
+        }
+      });
+
+      if (nextUrl) {
+        await page.goto(nextUrl, {
+          waitUntil: 'domcontentloaded',
+          timeout: PLAYWRIGHT_TIMEOUT_MS,
+        });
+        await page.waitForTimeout(PLAYWRIGHT_HYDRATE_MS);
+        ({ jobs } = await collectPageJobs(page, company.name));
+      }
+    }
+
+    return dedupeJobs(jobs);
+  } finally {
+    await page.close();
+  }
+}
+
 // ── Main ────────────────────────────────────────────────────────────
 
 async function main() {
@@ -265,16 +446,19 @@ async function main() {
   const companies = config.tracked_companies || [];
   const titleFilter = buildTitleFilter(config.title_filter);
 
-  // 2. Filter to enabled companies with detectable APIs
-  const targets = companies
+  // 2. Filter to enabled companies
+  const enabledCompanies = companies
     .filter(c => c.enabled !== false)
-    .filter(c => !filterCompany || c.name.toLowerCase().includes(filterCompany))
-    .map(c => ({ ...c, _api: detectApi(c) }))
-    .filter(c => c._api !== null);
+    .filter(c => !filterCompany || c.name.toLowerCase().includes(filterCompany));
 
-  const skippedCount = companies.filter(c => c.enabled !== false).length - targets.length;
+  const targets = enabledCompanies.map(c => ({ ...c, _api: detectApi(c) }));
+  const apiTargets = targets.filter(c => c._api !== null && c.scan_method !== 'playwright');
+  const pageTargets = targets.filter(c => c.careers_url && (c._api === null || c.scan_method === 'playwright'));
+  const skippedCount = enabledCompanies.length - new Set([...apiTargets, ...pageTargets]).size;
 
-  console.log(`Scanning ${targets.length} companies via API (${skippedCount} skipped — no API detected)`);
+  console.log(
+    `Scanning ${apiTargets.length} companies via API and ${pageTargets.length} via Playwright (${skippedCount} skipped)`
+  );
   if (dryRun) console.log('(dry run — no files will be written)\n');
 
   // 3. Load dedup sets
@@ -289,11 +473,11 @@ async function main() {
   const newOffers = [];
   const errors = [];
 
-  const tasks = targets.map(company => async () => {
+  const tasks = apiTargets.map(company => async () => {
     const { type, url } = company._api;
     try {
-      const json = await fetchJson(url);
-      const jobs = PARSERS[type](json, company.name);
+      const payload = type === 'teamtailor' ? await fetchText(url) : await fetchJson(url);
+      const jobs = PARSERS[type](payload, company.name);
       totalFound += jobs.length;
 
       for (const job of jobs) {
@@ -321,6 +505,41 @@ async function main() {
   });
 
   await parallelFetch(tasks, CONCURRENCY);
+
+  if (pageTargets.length > 0) {
+    const browser = await chromium.launch({ headless: true });
+    try {
+      for (const company of pageTargets) {
+        try {
+          const jobs = await scanCareersPage(browser, company);
+          totalFound += jobs.length;
+
+          for (const job of jobs) {
+            if (!titleFilter(job.title)) {
+              totalFiltered++;
+              continue;
+            }
+            if (seenUrls.has(job.url)) {
+              totalDupes++;
+              continue;
+            }
+            const key = `${job.company.toLowerCase()}::${job.title.toLowerCase()}`;
+            if (seenCompanyRoles.has(key)) {
+              totalDupes++;
+              continue;
+            }
+            seenUrls.add(job.url);
+            seenCompanyRoles.add(key);
+            newOffers.push({ ...job, source: 'playwright-page' });
+          }
+        } catch (err) {
+          errors.push({ company: company.name, error: `Playwright: ${err.message}` });
+        }
+      }
+    } finally {
+      await browser.close();
+    }
+  }
 
   // 5. Write results
   if (!dryRun && newOffers.length > 0) {

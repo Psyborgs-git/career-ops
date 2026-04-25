@@ -65,4 +65,13 @@ Si el score final es >= 4.5, generar borrador de respuestas para el formulario d
 ## Paso 5 — Actualizar Tracker
 Registrar en `data/applications.md` con todas las columnas incluyendo Report y PDF en ✅.
 
+## Paso 6 — Aplicación Automatizada (Opcional)
+
+Si el score es >= 4.5 y el usuario ha habilitado "Auto-apply" en su perfil, o si lo solicita explícitamente:
+1. Usar Playwright para navegar al formulario de aplicación.
+2. Rellenar todos los campos utilizando los datos del perfil y las respuestas generadas en el Paso 4.
+3. Adjuntar el CV PDF y la Cover Letter PDF generados en el Paso 3.
+4. Enviar la aplicación.
+5. Si tiene éxito, actualizar el estado en `data/applications.md` a "Aplicado" y registrar la fecha.
+
 **Si algún paso falla**, continuar con los siguientes y marcar el paso fallido como pendiente en el tracker.

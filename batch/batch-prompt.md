@@ -140,17 +140,16 @@ Top 5 cambios al CV + Top 5 cambios a LinkedIn.
 
 #### Bloque G — Posting Legitimacy
 
-Analyze posting signals to assess whether this is a real, active opening.
+Analyze posting signals to assess whether this is a real, active opening. Use Playwright if available to verify posting freshness signals (exact days posted, apply button state).
 
-**Batch mode limitations:** Playwright is not available, so posting freshness signals (exact days posted, apply button state) cannot be directly verified. Mark these as "unverified (batch mode)."
-
-**What IS available in batch mode:**
+**Signals available:**
 1. **Description quality analysis** -- Full JD text is available. Analyze specificity, requirements realism, salary transparency, boilerplate ratio.
 2. **Company hiring signals** -- WebSearch queries for layoff/freeze news (combine with Block D comp research).
 3. **Reposting detection** -- Read `data/scan-history.tsv` to check for prior appearances.
 4. **Role market context** -- Qualitative assessment from JD content.
+5. **Real-time signals (Playwright)** -- Exact days posted, activity on the apply button, and JD liveness.
 
-**Output format:** Same as interactive mode (Assessment tier + Signals table + Context Notes), but with a note that posting freshness is unverified.
+**Output format:** Same as interactive mode (Assessment tier + Signals table + Context Notes).
 
 **Assessment:** Apply the same three tiers (High Confidence / Proceed with Caution / Suspicious), weighting available signals more heavily. If insufficient signals are available to make a determination, default to "Proceed with Caution" with a note about limited data.
 

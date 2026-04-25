@@ -17,7 +17,8 @@ Modo interactivo para cuando el candidato está rellenando un formulario de apli
 5. COMPARAR    → ¿El rol en pantalla coincide con el evaluado? Si cambió → avisar
 6. ANALIZAR    → Identificar TODAS las preguntas del formulario visibles
 7. GENERAR     → Para cada pregunta, generar respuesta personalizada
-8. PRESENTAR   → Mostrar respuestas formateadas para copy-paste
+8. EJECUTAR    → Si se solicita: completar campos y enviar aplicación vía Playwright
+9. VALIDAR     → Confirmar envío y actualizar tracker/reports
 ```
 
 ## Paso 1 — Detectar la oferta
@@ -60,7 +61,7 @@ Clasificar cada pregunta:
 
 ## Paso 5 — Generar respuestas
 
-Para cada pregunta, generar la respuesta siguiendo:
+Para cada pregunta, generar the respuesta siguiendo:
 
 1. **Contexto del report**: Usar proof points del bloque B, historias STAR del bloque F
 2. **Section G previa**: Si existe una respuesta draft, usarla como base y refinar
@@ -92,9 +93,19 @@ Notas:
 - [Sugerencias de personalización que el candidato debería revisar]
 ```
 
-## Paso 6 — Post-apply (opcional)
+## Paso 6 — Aplicación Automatizada (Playwright)
 
-Si el candidato confirma que envió la aplicación:
+Si el usuario solicita "Apply for me":
+1. Identificar selectores para cada campo del formulario.
+2. Rellenar campos de texto con las respuestas generadas.
+3. Rellenar campos fijos (nombre, email, LinkedIn) desde `config/profile.yml`.
+4. Subir archivos (CV PDF generado, Cover Letter PDF) si están disponibles en `output/`.
+5. Manejar preguntas dinámicas o dropdowns basándose en el contexto del perfil.
+6. Esperar confirmación del usuario antes de pulsar "Submit" final (a menos que se indique "Auto-submit").
+
+## Paso 7 — Post-apply
+
+Si la aplicación se envió (manual o automáticamente):
 1. Actualizar estado en `applications.md` de "Evaluada" a "Aplicado"
 2. Actualizar Section G del report con las respuestas finales
 3. Sugerir siguiente paso: `/career-ops contacto` para LinkedIn outreach

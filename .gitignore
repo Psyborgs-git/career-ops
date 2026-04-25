@@ -16,6 +16,11 @@ batch/tracker-additions/**/*.tsv
 jds/*
 !jds/.gitkeep
 
+.vgc
+cv.md
+# interviews-prep/*.md
+interview-prep/story-bank.md
+
 # User config and customization (never auto-updated)
 config/profile.yml
 portals.yml

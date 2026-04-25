@@ -569,8 +569,16 @@ main() {
           fi
         done
         # Compact arrays
-        pids=("${pids[@]}")
-        pid_ids=("${pid_ids[@]}")
+        if (( ${#pids[@]} )); then
+          pids=("${pids[@]}")
+        else
+          pids=()
+        fi
+        if (( ${#pid_ids[@]} )); then
+          pid_ids=("${pid_ids[@]}")
+        else
+          pid_ids=()
+        fi
         sleep 1
       done
 

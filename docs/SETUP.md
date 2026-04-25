@@ -36,7 +36,7 @@ Create `cv.md` in the project root with your full CV in markdown format. This is
 ```bash
 cp templates/portals.example.yml portals.yml
 ```
-
+ 1
 Edit `portals.yml`:
 - Update `title_filter.positive` with keywords matching your target roles
 - Add companies you want to track in `tracked_companies`

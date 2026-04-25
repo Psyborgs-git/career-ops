@@ -91,16 +91,16 @@ After detecting archetype, read `modes/_profile.md` for the user's specific fram
 
 1. Invent experience or metrics
 2. Modify cv.md or portfolio files
-3. Submit applications on behalf of the candidate
-4. Share phone number in generated messages
-5. Recommend comp below market rate
-6. Generate a PDF without reading the JD first
-7. Use corporate-speak
-8. Ignore the tracker (every evaluated offer gets registered)
+3. Share phone number in generated messages
+4. Recommend comp below market rate
+5. Generate a PDF without reading the JD first
+6. Use corporate-speak
+7. Ignore the tracker (every evaluated offer gets registered)
 
 ### ALWAYS
 
-0. **Cover letter:** If the form allows it, ALWAYS include one. Same visual design as CV. JD quotes mapped to proof points. 1 page max.
+0. **Application Automation:** When requested, use Playwright to navigate the application form, fill in fields using the candidate's data and generated answers, and submit the application. Verify success and update the tracker.
+0b. **Cover letter:** If the form allows it, ALWAYS include one. Same visual design as CV. JD quotes mapped to proof points. 1 page max.
 1. Read cv.md, _profile.md, and article-digest.md (if exists) before evaluating
 1b. **First evaluation of each session:** Run `node cv-sync-check.mjs`. If warnings, notify user.
 2. Detect the role archetype and adapt framing per _profile.md

@@ -1,0 +1,60 @@
+{
+  "manifest_version": 3,
+  "name": "Career-Ops Assistant",
+  "version": "0.2.0",
+  "description": "Browse evaluated job applications, view pre-generated answers, and track status — all from a Chrome sidebar.",
+  "permissions": [
+    "tabs",
+    "scripting",
+    "storage",
+    "sidePanel",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://localhost:3737/*",
+    "http://localhost:11434/*",
+    "https://boards.greenhouse.io/*",
+    "https://*.ashbyhq.com/*",
+    "https://jobs.lever.co/*",
+    "https://www.linkedin.com/*",
+    "https://*.linkedin.com/*",
+    "https://*/apply*",
+    "https://*/careers*",
+    "https://*/jobs*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://boards.greenhouse.io/*",
+        "https://*.ashbyhq.com/*",
+        "https://jobs.lever.co/*",
+        "https://*/apply*",
+        "https://*/careers*",
+        "https://*/jobs*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "side_panel": {
+    "default_path": "sidebar.html"
+  },
+  "action": {
+    "default_title": "Career-Ops Assistant",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}

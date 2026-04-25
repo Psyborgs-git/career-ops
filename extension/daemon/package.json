@@ -1,0 +1,13 @@
+{
+  "name": "career-ops-extension-daemon",
+  "version": "1.0.0",
+  "description": "Local server providing file access for Career-Ops Chrome extension",
+  "main": "daemon/server.js",
+  "scripts": {
+    "daemon": "node daemon/server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  }
+}
