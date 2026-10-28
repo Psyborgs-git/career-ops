@@ -29,7 +29,9 @@ function parseApplicationsTable(markdown) {
 
     if (!line.startsWith('|') || line.includes('---')) continue;
 
-    const cells = line.split('|').map(cell => cell.trim()).filter(Boolean);
+    const cells = line.split('|').map(cell => cell.trim());
+    if (cells[0] === '') cells.shift();
+    if (cells[cells.length - 1] === '') cells.pop();
     if (cells.length < 9) continue;
 
     const [num, date, company, role, score, status, pdf, reportLink, ...rest] = cells;
@@ -283,7 +285,9 @@ function updateApplicationStatus(applicationsPath, postingNumber, newStatus) {
     const line = lines[i];
     if (!line.startsWith('|')) continue;
 
-    const cells = line.split('|').map(c => c.trim()).filter(Boolean);
+    const cells = line.split('|').map(c => c.trim());
+    if (cells[0] === '') cells.shift();
+    if (cells[cells.length - 1] === '') cells.pop();
     if (cells.length < 9) continue;
 
     const num = parseInt(cells[0], 10);

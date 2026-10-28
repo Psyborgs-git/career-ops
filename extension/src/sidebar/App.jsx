@@ -44,7 +44,7 @@ export default function App() {
 
   // Filters
   const [search, setSearch] = useState('');
-  const [scoreFilter, setScoreFilter] = useState(4.0);
+  const [scoreFilter, setScoreFilter] = useState(0);
   const [statusFilter, setStatusFilter] = useState('All');
   const [sortBy, setSortBy] = useState('score'); // 'score' | 'date' | 'priority'
 
